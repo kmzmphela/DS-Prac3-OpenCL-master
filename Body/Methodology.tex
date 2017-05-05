@@ -1,0 +1,191 @@
+\section{Methodology}
+This section describes the methods used in these experiments.
+
+\subsection{Device Information}
+
+\subsubsection{CPU}
+\begin{itemize}
+	\item Device Name: Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz
+	\item Available Compute Units: 4
+	\item Available work Units: [8192, 8192, 8192]
+	\item Clockrate: 2300
+	\item Available Alloc Memory: 16097245184\\
+\end{itemize}
+
+
+\subsubsection{GPU}
+\begin{itemize}
+	\item Device Name: Tesla K80
+	\item Available Compute Units: 13
+	\item Available work Units: [1024, 1024, 64]
+	\item Clockrate: 823
+	\item Available Alloc Memory: 2998894592
+\end{itemize}
+
+\subsection{Implementation}
+Also mention the implementation source code:
+
+
+\begin{OpenCL_float}{OpenCL code to obtain device information}{OpenCL_Device_Info}
+name_properties = {
+	"Device Name":pyopencl.device_info.NAME,
+}
+
+processing_properties = {
+	"Available Compute Units": pyopencl.device_info.MAX_COMPUTE_UNITS,
+	"Available work Units": pyopencl.device_info.MAX_WORK_ITEM_SIZES,
+	"Clockrate": pyopencl.device_info.MAX_CLOCK_FREQUENCY
+}
+
+memory_properties = {
+	"Available Alloc Memory": pyopencl.device_info.MAX_MEM_ALLOC_SIZE
+}
+
+for device in (nvidia_device,intel_device):
+	#print out all of the device name properties, except the device type
+	for property_name in sorted(name_properties.keys() - {"Device Type"}):
+		property_string_args =\\
+		(property_name,device.get_info(name_properties[property_name]))
+		print("%s: %s"%property_string_args)
+
+	#print out all of the processing properties
+	for property_name in sorted(processing_properties.keys()):
+		property_string_args =\\
+		(property_name,device.get_info(processing_properties[property_name]))
+		print("%s: %s"%property_string_args)
+	
+	#print out all of the memory properties
+	for property_name in sorted(memory_properties.keys()):
+		property_string_args =\\
+		(property_name,device.get_info(memory_properties[property_name]))
+		print("%s: %s"%property_string_args)
+	
+	print("\n")
+\end{OpenCL_float}
+
+\begin{Python}{OpenCL run_cpu_program}{cpu_sum}
+def run_cpu_program():
+	#copying data onto CPU
+	pyopencl.enqueue_copy(intel_queue,
+	src=a,
+	dest=a_intel_buffer)
+	pyopencl.enqueue_copy(intel_queue,
+	src=b,
+	dest=b_intel_buffer)
+	
+	#running program
+	kernel_arguments = (a_intel_buffer,b_intel_buffer,c_intel_buffer) 
+	intel_program.sum(intel_queue,
+	a.shape, #global size
+	None, #local size
+	*kernel_arguments)
+	
+	#copying data off CPU
+	copy_off_event = pyopencl.enqueue_copy(intel_queue,
+	src=c_intel_buffer,
+	dest=c)
+	copy_off_event.wait()
+\end{Python}
+
+
+\begin{Python}{OpenCL run_gpu_program}{gpu_sum}
+def run_gpu_program():
+	#copying data onto GPU
+	pyopencl.enqueue_copy(nvidia_queue,
+	src=a,
+	dest=a_nvidia_buffer)
+	pyopencl.enqueue_copy(nvidia_queue,
+	src=b,
+	dest=b_nvidia_buffer)
+	
+	#running program
+	kernel_arguments = (a_nvidia_buffer,b_nvidia_buffer,c_nvidia_buffer) 
+	nvidia_program.sum(nvidia_queue,
+	a.shape, #global size
+	None, #local size
+	*kernel_arguments)
+	
+	#copying data off GPU
+	copy_off_event = pyopencl.enqueue_copy(nvidia_queue,
+	src=c_nvidia_buffer,
+	dest=c)
+	copy_off_event.wait()
+\end{Python}
+
+\begin{Cpp}{C Kernel factor_count}{factor_count}
+#define data_t int
+
+// Factor Count
+// X - N x M matrix
+// factors - N x M --
+kernel void factor_count(global data_t *X,
+global data_t *factors,
+int N,
+int M)
+{
+	int row = get_global_id(0);
+	int col = get_global_id(1);
+	
+	int offset = row*M; //start of row of X and factor
+	
+	//Calculation loop
+	data_t sum = 0; //private variable used to cache result
+	for(int i=0;i<N;++i) {
+		for(int j=0;j<M;++j) {
+			int nf = 0;
+			for(int k=2;k<101;++k) {
+				if( (X[offset + j + i*M] % k) == 0)
+				++nf; 
+			}
+			factors[offset + j + i*M] = nf;
+		}
+	}
+}
+	
+\end{Cpp}
+
+
+\begin{Python}{Python factor_count program}{factor_count}
+def opencl_factor_count(data_arrays,buffers,queue,kernel,N=100,M=100):
+	a = data_arrays
+	a_buffer,c_buffer = buffers
+	N,M = numpy.int32(M),numpy.int32(N) #converting to the exepcted type for OpenCL
+	
+	#copying data onto device
+	copyon_events = []
+	
+	copyon_events += [pyopencl.enqueue_copy(queue,
+	src=a,
+	dest=a_buffer)]
+	
+	#running program
+	kernel_event = kernel(queue,
+	(N,N), #global size
+	None, #local size 
+	a_buffer,c_buffer,N,M, #Kernel Arguments
+	wait_for = copyon_events)
+	
+	
+	#copying data off device
+	c = numpy.empty((N,N),dtype=dt)
+	copyoff_event = pyopencl.enqueue_copy(queue,
+	src = c_buffer,
+	dest = c,
+	wait_for = [kernel_event])
+	copyoff_event.wait()
+	
+	return c
+
+data_arrays = create_arrays()
+
+get_ipython().magic('timeit opencl_factor_count(data_arrays,nvidia_buffers,\\
+nvidia_queue,nvidia_program.factor_count)')
+get_ipython().magic('timeit opencl_factor_count(data_arrays,intel_buffers,\\
+intel_queue,intel_program.factor_count)')
+
+\end{Python}
+Only list what is relevant.  Don't give too much detail - just enough to show what you've done.  This template supports the following languages:
+
+  
+\subsection{Experiment Procedure}
+Furthermore, include detail relating to the experiment itself: what did you do, in what order was this done, why was this done, etc.  What are you trying to prove / disprove?

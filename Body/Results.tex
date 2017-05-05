@@ -1,0 +1,44 @@
+\section{Results}
+The results section is for presenting and discussing your findings.  You can split it into subsections if the experiment has multiple sections or stages.
+
+\subsection{Figures}
+Include good quality graphs (see Fig.~\ref{fig:r_vs_N;_f=0_0005;_P=90}).  These were produced by the Octave code presented in listings~\ref{lst:FormatFig} and~\ref{lst:PlotExample}.  You can play around with the \texttt{PaperSize} and \texttt{PaperPosition} variables to change the aspect ratio.  An easy way to obtain more space on a paper is to use wide, flat figures, such as Fig.~\ref{fig:Line_Signals}.
+
+\Figure[width=0.8\columnwidth]{The CPU vs. GPU speedup on sum as a function of vector size.}{speedup_sum}
+
+\Figure[width=0.8\columnwidth]{The CPU vs. GPU speedup on factor count as a function of matrix size.}{speedup_factor_count}
+
+
+\subsection{Tables}
+
+\centering \textbf{CPU vs GPU on Sum}\\
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{c c c c c c c} 
+		\hline\hline
+		 Size(Nx1) & Golden Time(ms) & CPU Time(ms) & GPU Time (ms) & CPU Speedup &GPU Speedup\\ [0.5ex] 
+		\hline
+		1e2 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		1e4 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		1e8 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		1e9 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		\hline\hline
+	\end{tabular}	
+\end{table}
+
+\centering \textbf{CPU vs GPU on Factor Count}\\
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{c c c c c c } 
+		\hline\hline
+		Size(NxM) & Octave Time(s) & CPU Time(s) & GPU Time (s) & CPU Speedup &GPU Speedup\\ [0.5ex] 
+		\hline
+		10x10 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		100x100 & 17.44 & 5.14 & 0.17 & 3.39 & 102.59\\ [1ex] 
+		1000x1000 & 00 & 00 & 00 & 00 & 00 \\ [1ex] 
+		10000x10000 & 00 & 00 & 00 & 00 & 00\\ [1ex] 
+		\hline\hline
+	\end{tabular}	
+\end{table}
+
+
